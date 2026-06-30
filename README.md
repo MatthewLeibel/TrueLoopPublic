@@ -1,6 +1,6 @@
 # TrueLoop: measurement-efficient optimization - reproduction code
 
-> Repository: `github.com/MatthewLeibel/TrueLoopPublic` 
+> Repository: `[github.com/MatthewLeibel/TrueLoopPublic](https://github.com/MatthewLeibel/TrueLoopPublic/tree/Optimization)` 
 
 Reproduce the measurement-efficient optimization results using the **live TrueLoop runtime endpoint**.
 These scripts drive the real runtime (one measurement per round, model-free) against a **simulated**
