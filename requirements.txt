@@ -1,0 +1,2 @@
+# No third-party dependencies. Pure Python 3 standard library.
+# Python 3.8+ recommended.

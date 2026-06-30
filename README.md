@@ -1,65 +1,70 @@
-# TrueLoop x PQC-QKD: reproduction code
+# TrueLoop: measurement-efficient optimization - reproduction code
 
-Reproduce the PQC-QKD physical-layer stabilization results using the **live TrueLoop runtime
-endpoint**. These scripts drive the real runtime (one measurement per round, model-free) against
-a **simulated** QKD/QRNG plant. Swap the simulated plant for your hardware to validate on a real
-entropy source or QKD link.
+> Repository: `github.com/MatthewLeibel/TrueLoopPublic` (replace with your URL on publish)
 
-## What this is (and what it is not)
+Reproduce the measurement-efficient optimization results using the **live TrueLoop runtime endpoint**.
+These scripts drive the real runtime (one measurement per round, model-free) against a **simulated**
+objective. Swap the simulated objective for your hardware to validate on a real measurement-limited
+optimization or control problem.
 
-- **It is** the exact experiment code that produced our simulation results, calling the public
-  runtime endpoint. You send a measurement each round and receive the next control configuration.
-- **It is not** the runtime's internal method. That runs server-side and is not in this code.
-  These scripts only use the runtime's measured input/output behaviour.
+## What this is (and is not)
 
-## Claim tier (please preserve this when sharing results)
+- **It is** the experiment code behind the results: the runtime calls the public endpoint, you send a
+  measurement each round and receive the next configuration.
+- **It is not** the runtime's internal method. That runs server-side and is not in this code. These
+  scripts use only the runtime's measured input/output behaviour.
 
-All numbers these scripts produce are **SIMULATED PLANT + LIVE RUNTIME**. They demonstrate the
-control law's behaviour, not validation on real QKD hardware. Hardware validation is the open
-question this code is meant to help answer.
+## Claim tier (please preserve when sharing results)
+
+All numbers these scripts produce are **SIMULATED OBJECTIVE + LIVE RUNTIME**. They demonstrate the
+method's behaviour, not validation on hardware. Hardware validation is the open question this code
+helps answer.
 
 ## Setup
 
 1. Get a **free evaluation key** at https://compute.neophotonics.ca/
-2. Open `trueloop_client.py` and replace `YOUR_EVAL_KEY` with your key.
-3. Check connectivity:
-   ```
-   python trueloop_client.py
-   ```
-   You should see `OK - endpoint reachable and key valid.`
+2. Open `trueloop_client.py`, replace `YOUR_EVAL_KEY` with your key.
+3. Check connectivity: `python trueloop_client.py` -> `OK - endpoint reachable and key valid.`
 
-Requires only Python 3 standard library (no dependencies).
+Pure Python 3 standard library; no dependencies.
 
 ## Run the experiments
 
 ```
-python experiment_qkd_keyrate.py        # headline: secure key rate + link uptime under drift
-python experiment_qkd_suite.py A        # QRNG entropy bias stabilization
-python experiment_qkd_suite.py B        # QKD modulator/interferometer bias lock
-python experiment_qkd_suite.py C        # polarization / state-alignment hold
-python experiment_attack_safety.py      # runtime does not mask an attack's QBER signature
+# Headline: equal shared budget, runtime solves where digital collapses
+python experiment_starved.py 1024 128      # n=1024, 128 measurements for every method
+python experiment_starved.py 256 16        # push starvation harder
+python experiment_starved.py 64 8          # near the runtime's own floor
+
+# Advantage compounds with dimension (digital gets B=K*n, runtime capped)
+python experiment_scaling.py 1024 140 10
+
+# Tracking a moving optimum
+python experiment_tracking.py 0.008        # slow drift: runtime tracks
+python experiment_tracking.py 0.05         # fast drift: runtime's bandwidth limit
 ```
 
 ## Validate on YOUR hardware
 
-Each experiment isolates the simulated plant in one place, marked `hardware swap point` /
-`measure_plant()` / `measure()`. To validate on real hardware:
+Each experiment isolates the simulated objective in one function marked `hardware swap point`
+(`measure_signal(...)`). To validate on real hardware:
 
-1. Replace that function so it returns the **per-channel error signal** read from your real
-   device under the current control configuration `phi`.
-2. Apply the configuration the runtime returns (`r["phi"]`) to your real control variables
-   (modulator bias, phase shifter, polarization controller, etc.).
-3. Keep the loop structure identical: measure once, send, apply the returned config, repeat.
+1. Replace that function so it returns the **per-channel error signal** read from your device under
+   the current configuration `x` (the signal that vanishes at your optimum / operating point).
+2. Apply the configuration the runtime returns (`r["phi"]`) to your real control variables.
+3. Keep the loop identical: measure once, send, apply the returned configuration, repeat.
 
-The runtime never needs a model of your device; it discovers the control directions from your
-measurements.
+The runtime needs no model of your device; it discovers the control directions from your measurements.
 
 ## Known envelope (where this is expected to work)
 
-- **Works:** slow-to-moderate drift on a single link where each measurement is costly.
-- **Does not scale** with channel count (the per-link QKD objective is forgiving).
-- **Bandwidth / capture-range limited:** degrades under fast structured drift or large sudden
-  excursions; pair with coarse re-acquisition for big jumps.
+- **Works:** high-dimensional optimization/control where each measurement is costly (the
+  measurement-starved regime); tracking slow-to-moderate moving optima.
+- **Local, continuous, anytime:** a fast local optimizer toward a stationary point, not a global or
+  combinatorial (NP-hard) solver. A sampling-based attempt at direct combinatorial optimization did
+  not beat local search; the honest combinatorial role is operating-point control of a physical solver.
+- **Bandwidth / capture / floor:** degrades under very fast target motion or large excursions, and has
+  a measurement floor (order ten measurements) below which it too fails.
 
 ## Contact
 
